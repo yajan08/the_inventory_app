@@ -8,14 +8,32 @@ class Item {
   bool isLow;
   String note;
   Timestamp timeCreated;
+  String location;
 
 Item({
     this.name = 'no Name',
     this.quantity = 0,
     this.minQuantity = 0,
-    this.note = 'no Note',
+    this.note = 'No note',
     Timestamp? timeCreated,
+    this.location = 'Not set'
   }) : timeCreated = timeCreated ?? Timestamp.now(), isLow = quantity < minQuantity;
+
+}
+
+class Log {
+
+  String userEmail;
+  String quantityBefore;
+  String quantityAfter;
+  Timestamp timeEdited;
+
+  Log({
+    required this.userEmail,
+    required this.quantityBefore,
+    required this.quantityAfter,
+    Timestamp? timeEdited,
+  }) : timeEdited = timeEdited ?? Timestamp.now();
 
 }
 
@@ -32,6 +50,8 @@ Future<void> addItem(Item item){
     'minQuantity': item.minQuantity,
     'isLow': item.quantity < item.minQuantity,
     'timeCreated': Timestamp.now(),
+    'location': item.location,
+    'note': item.note,
   });
 }
 
@@ -44,7 +64,23 @@ Stream<QuerySnapshot> getItemsStream(){
   .snapshots();
 
   return itemsStream;
-
 }
+
+// update items 
+Future<void> updateItem(String docId, Item item){
+
+  // add log object here passing useremail ad item to monitor changes before and after.
+
+    return items.doc(docId).update({
+      'name': item.name,
+      'quantity': item.quantity,
+      'minQuantity': item.minQuantity,
+      'isLow': item.quantity < item.minQuantity,
+      // not updating time created
+      'location': item.location,
+      'note': item.note,
+    });
+
+  }
 
 }

@@ -5,12 +5,14 @@ class MyTextField extends StatefulWidget {
   final String hintText;
   final bool obscureText;
   final TextEditingController controller;
+  final TextInputType keyboardType;
 
   const MyTextField({
     super.key,
     required this.hintText,
     required this.obscureText,
     required this.controller,
+    this.keyboardType = TextInputType.text,
   });
 
   @override
@@ -35,9 +37,10 @@ class _MyTextFieldState extends State<MyTextField> {
         controller: widget.controller,
 
         obscureText: _isObscured, // use local state
-
+        keyboardType: widget.keyboardType,
         decoration: InputDecoration(
-          hintText: widget.hintText,
+          labelText: widget.hintText,
+          hintText: "Enter ${widget.hintText}...",
           hintStyle: TextStyle(
             color: Colors.blue.shade300,
           ),
@@ -57,7 +60,6 @@ class _MyTextFieldState extends State<MyTextField> {
                   },
                 )
               : null,
-
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide:
