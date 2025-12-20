@@ -69,7 +69,7 @@ void addItemDialog() {
               MyTextField(
                 hintText: "Location",
                 obscureText: false,
-                controller: itemNoteController,
+                controller: itemLocationController,
               ),
               const SizedBox(height: 12),
               MyTextField(

@@ -83,4 +83,9 @@ Future<void> updateItem(String docId, Item item){
 
   }
 
+// delete item 
+Future<void> deleteItem(String docId){
+  return items.doc(docId).delete();
+}
+
 }

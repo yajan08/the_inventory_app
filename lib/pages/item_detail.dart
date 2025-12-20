@@ -25,6 +25,35 @@ class _ItemDetailState extends State<ItemDetail> {
   final TextEditingController noteController = TextEditingController();
   final TextEditingController stockInOutController = TextEditingController();
 
+void _confirmDelete() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Delete Item"),
+      content: const Text("Are you sure you want to delete this item?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context); // close dialog
+            Navigator.pop(context); // go back to list
+            await FirestoreService().deleteItem(widget.docId);
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text("Delete"),
+        ),
+      ],
+    ),
+  );
+}
+
+
 // CHANGE 1: add a parameter to control stock in / out
 void stockInOutDialog({required bool isStockIn}) {
   showDialog(
@@ -119,6 +148,12 @@ void stockInOutDialog({required bool isStockIn}) {
           ),
         backgroundColor: Color(0xFF124d95),
         foregroundColor: Color(0xFFe9f5ff),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _confirmDelete, // call confirmation dialog
+          ),
+       ],
         ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
@@ -130,7 +165,14 @@ void stockInOutDialog({required bool isStockIn}) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
+          // final data = snapshot.data!.data() as Map<String, dynamic>;
+          final doc = snapshot.data;
+
+if (doc == null || !doc.exists) {
+  return const Center(child: Text('Item not found'));
+}
+
+final data = doc.data() as Map<String, dynamic>;
 
           // initialize controllers only once
           if (!_initialized) {
@@ -241,7 +283,7 @@ void stockInOutDialog({required bool isStockIn}) {
         keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          hintText: 'Enter ${label}...',
+          hintText: 'Enter $label...',
           hintStyle: TextStyle(
           color: Colors.blue.shade300
           ),
