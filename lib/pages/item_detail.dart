@@ -1,6 +1,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:the_inventory_app/services/auth_service.dart';
 import 'package:the_inventory_app/services/firestore.dart';
 import 'package:the_inventory_app/utilities/my_textfield.dart';
 
@@ -18,12 +19,32 @@ class ItemDetail extends StatefulWidget {
 
 class _ItemDetailState extends State<ItemDetail> {
 
+  Stream<QuerySnapshot> _logsStream() {
+  return FirebaseFirestore.instance
+      .collection('logs')
+      .where('itemId', isEqualTo: widget.docId)
+      .orderBy('timeEdited', descending: true)
+      .snapshots();
+}
+
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController minQuantityController = TextEditingController();
   final TextEditingController locationController = TextEditingController();
   final TextEditingController noteController = TextEditingController();
   final TextEditingController stockInOutController = TextEditingController();
+
+  @override
+void dispose() {
+  nameController.dispose();
+  quantityController.dispose();
+  minQuantityController.dispose();
+  locationController.dispose();
+  noteController.dispose();
+  stockInOutController.dispose();
+  super.dispose();
+}
 
 void _confirmDelete() {
   showDialog(
@@ -183,7 +204,7 @@ final data = doc.data() as Map<String, dynamic>;
                 (data['minQuantity'] ?? 0).toString();
             locationController.text = data['location'] ?? '';
             _initialized = true;
-            noteController.text = data['notes'] ?? '';
+            noteController.text = data['note'] ?? '';
           }
 
           final quantity = data['quantity'] ?? 0;
@@ -222,6 +243,134 @@ final data = doc.data() as Map<String, dynamic>;
                     child: const Text("Save Changes"),
                   ),
                 ),
+                const SizedBox(height: 32),
+
+const Text(
+  "Logs",
+  style: TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.bold,
+  ),
+),
+
+const SizedBox(height: 12),
+
+StreamBuilder<QuerySnapshot>(
+  stream: _logsStream(),
+  builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const CircularProgressIndicator();
+    }
+
+    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+      return const Text(
+        'No logs yet',
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: snapshot.data!.docs.length,
+      itemBuilder: (context, index) {
+        final log = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+
+        final before = log['quantityBefore'] as int;
+final after = log['quantityAfter'] as int;
+final delta = after - before;
+final isStockIn = delta > 0;
+
+return Card(
+  margin: const EdgeInsets.symmetric(vertical: 6),
+  shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(12),
+  ),
+  child: Padding(
+    padding: const EdgeInsets.all(12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // LEFT ICON (full visual weight)
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: (isStockIn ? Colors.green : Colors.orange).withAlpha(30),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            isStockIn ? Icons.add : Icons.remove,
+            color: isStockIn ? Colors.green : Colors.orange,
+            size: 28,
+          ),
+        ),
+
+        const SizedBox(width: 12),
+
+        // RIGHT CONTENT
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // TOP ROW: delta + before/after
+              Row(
+                children: [
+                  Text(
+                    '${delta > 0 ? '+' : ''}$delta',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isStockIn ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '$before → $after',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 6),
+
+              // USER EMAIL
+              Text(
+                log['userEmail'] ?? 'Unknown user',
+                style: const TextStyle(
+                  fontSize: 14,
+                ),
+              ),
+
+              const SizedBox(height: 2),
+
+              // DATE TIME
+              Text(
+                _formatTimestamp(log['timeEdited']),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+);
+
+
+
+      },
+    );
+  },
+),
+
+
               ],
             ),
           );
@@ -302,24 +451,64 @@ final data = doc.data() as Map<String, dynamic>;
     );
   }
 
+void _updateItem() {
+  final item = Item(
+    name: nameController.text,
+    quantity: int.tryParse(quantityController.text) ?? 0,
+    minQuantity: int.tryParse(minQuantityController.text) ?? 0,
+    location: locationController.text,
+    note: noteController.text,
+  );
 
-  void _updateItem() {
-// pass currentemail here. to add it to logs later.
+  // get current email
+  final userEmail = AuthService().getCurrentUser()?.email ?? 'unknown';
 
-    final item = Item(
-      name: nameController.text,
-      quantity: int.tryParse(quantityController.text) ?? 0,
-      minQuantity: int.tryParse(minQuantityController.text) ?? 0,
-      location: locationController.text,
-      note: noteController.text,
-    );
+  // pass email to updateItem
+  FirestoreService().updateItem(widget.docId, item, userEmail);
 
-    FirestoreService().updateItem(widget.docId, item);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Item updated')),
-    );
-    Navigator.pop(context);
-  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Item updated')),
+  );
+  Navigator.pop(context); // go back after update
 }
 
+
+//   void _updateItem() {
+
+// // pass currentemail here. to add it to logs later.
+
+//     final item = Item(
+//       name: nameController.text,
+//       quantity: int.tryParse(quantityController.text) ?? 0,
+//       minQuantity: int.tryParse(minQuantityController.text) ?? 0,
+//       location: locationController.text,
+//       note: noteController.text,
+//     );
+
+//     FirestoreService().updateItem(widget.docId, item);
+
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       const SnackBar(content: Text('Item updated')),
+//     );
+//     Navigator.pop(context);
+//     // showdialog also does pop, this also does pop, so user goes back to home page directly.
+//   }
+// }
+
+
+String _formatTimestamp(Timestamp timestamp) {
+  final dt = timestamp.toDate();
+  return '${dt.day.toString().padLeft(2, '0')} '
+      '${_month(dt.month)} ${dt.year} · '
+      '${dt.hour.toString().padLeft(2, '0')}:'
+      '${dt.minute.toString().padLeft(2, '0')}';
+}
+
+String _month(int m) {
+  const months = [
+    'Jan','Feb','Mar','Apr','May','Jun',
+    'Jul','Aug','Sep','Oct','Nov','Dec'
+  ];
+  return months[m - 1];
+}
+}

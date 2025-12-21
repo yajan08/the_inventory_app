@@ -63,7 +63,7 @@ class _MyTextFieldState extends State<MyTextField> {
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(20),
             borderSide:
-                BorderSide(color: Colors.blue.shade800),
+                BorderSide(color: Color(0xFF124d95)),
           ),
 
           focusedBorder: OutlineInputBorder(
