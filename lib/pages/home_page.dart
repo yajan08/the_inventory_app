@@ -150,7 +150,7 @@ void addItemDialog() {
         child: const Icon(Icons.add, color: Color(0xFFe9f5ff)),
       ),
 
-      body: Column(
+  body: Column(
   children: [
     Padding(
       padding: const EdgeInsets.all(12.0),

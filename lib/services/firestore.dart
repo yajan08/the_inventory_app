@@ -20,7 +20,6 @@ Item({
   }) : timeCreated = timeCreated ?? Timestamp.now(), isLow = quantity <= minQuantity;
 
 }
-  
 class Log {
 
   String userEmail;
@@ -36,6 +35,8 @@ class Log {
   }) : timeEdited = timeEdited ?? Timestamp.now();
 
 }
+
+// the log model can have a better implementation... with log class having required fields directly and using them later.
 
 class FirestoreService {
 
@@ -86,11 +87,14 @@ Future<void> updateItem(String docId, Item newItem, String userEmail) async {
       throw Exception('Quantity cannot be negative');
     }
 
+    final itemName = snapshot['name'] as String;
+
     // create log only if quantity changed
     if (oldQuantity != newQuantity) {
       final log = {
         'itemId': docId,
         'userEmail': userEmail, // <- use passed email
+        'itemName': itemName,
         'quantityBefore': oldQuantity,
         'quantityAfter': newQuantity,
         'timeEdited': Timestamp.now(),

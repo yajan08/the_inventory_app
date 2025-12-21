@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:the_inventory_app/pages/global_logs_page.dart';
 import 'package:the_inventory_app/pages/home_page.dart';
+import 'package:the_inventory_app/services/auth_service.dart';
 
 class MainNavigationPage extends StatefulWidget {
   const MainNavigationPage({super.key});
@@ -18,12 +19,27 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     const GlobalLogsPage(),
   ];
 
+final authService = AuthService();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("The Inventory App", style: TextStyle(color: Color(0xFFe9f5ff))),
         backgroundColor: const Color(0xFF124d95),
+        actions: [
+          // ElevatedButton(onPressed: () { authService.signOut(); }, child: Icon(Icons.logout_outlined))
+          Padding(
+            padding: const EdgeInsets.only(right: 18),
+            child: GestureDetector(
+              onTap: () { authService.signOut(); },
+              child: Icon(
+                Icons.logout_outlined,
+                color: Color(0xFFe9f5ff),
+              ),
+            ),
+          )
+        ],
       ),
       
       // The body shows the page based on the selected index
@@ -41,7 +57,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         unselectedItemColor: const Color(0x80e9f5ff), // 50% opacity
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.inventory), label: "Inventory"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "Logs"),
+          BottomNavigationBarItem(icon: Icon(Icons.assessment), label: "Logs"),
         ],
       ),
     );

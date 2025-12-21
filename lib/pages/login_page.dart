@@ -89,6 +89,7 @@ class _LoginPageState extends State<LoginPage> {
                    hintText: "Email",
                    obscureText: false,
                    controller: _emailController,
+                   keyboardType: TextInputType.emailAddress,
                  ),
            
                  const SizedBox(height: 15),

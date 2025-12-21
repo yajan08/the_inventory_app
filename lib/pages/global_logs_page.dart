@@ -14,92 +14,95 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: SearchBar(
-            hintText: 'Search logs...',
-            leading: const Icon(Icons.search),
-            elevation: WidgetStateProperty.all(0),
-            shape: WidgetStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return Scaffold(
+      backgroundColor: Color(0xFFe9f5ff),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: SearchBar(
+              hintText: 'Search logs...',
+              leading: const Icon(Icons.search),
+              elevation: WidgetStateProperty.all(0),
+              shape: WidgetStateProperty.all(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              onChanged: (value) {
+                setState(() {
+                  logQuery = value.toLowerCase().trim();
+                });
+              },
             ),
-            onChanged: (value) {
-              setState(() {
-                logQuery = value.toLowerCase().trim();
-              });
-            },
           ),
-        ),
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('logs')
-                .orderBy('timeEdited', descending: true)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) return const Center(child: Text('Error loading logs'));
-              if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-
-              final logs = snapshot.data!.docs.where((doc) {
-                final data = doc.data() as Map<String, dynamic>;
-                
-                // --- Data Normalization for Search ---
-                final email = (data['userEmail'] ?? '').toString().toLowerCase();
-                final itemName = (data['itemName'] ?? '').toString().toLowerCase();
-                final before = (data['quantityBefore'] ?? 0).toString();
-                final after = (data['quantityAfter'] ?? 0).toString();
-                
-                // Logic for "stock in" or "stock out" text search
-                final int diff = (data['quantityAfter'] ?? 0) - (data['quantityBefore'] ?? 0);
-                final String movement = diff > 0 ? "stock in" : "stock out";
-
-                // Return true if query matches ANY field
-                return email.contains(logQuery) || 
-                       itemName.contains(logQuery) || 
-                       before.contains(logQuery) || 
-                       after.contains(logQuery) ||
-                       movement.contains(logQuery);
-              }).toList();
-
-              if (logs.isEmpty) {
-                return Center(
-              child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.assignment,
-                  size: 80,
-                  color: Color(0x80124d95),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('logs')
+                  .orderBy('timeEdited', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) return const Center(child: Text('Error loading logs'));
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+      
+                final logs = snapshot.data!.docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  
+                  // --- Data Normalization for Search ---
+                  final email = (data['userEmail'] ?? '').toString().toLowerCase();
+                  final itemName = (data['itemName'] ?? '').toString().toLowerCase();
+                  final before = (data['quantityBefore'] ?? 0).toString();
+                  final after = (data['quantityAfter'] ?? 0).toString();
+                  
+                  // Logic for "stock in" or "stock out" text search
+                  final int diff = (data['quantityAfter'] ?? 0) - (data['quantityBefore'] ?? 0);
+                  final String movement = diff > 0 ? "stock in" : "stock out";
+      
+                  // Return true if query matches ANY field
+                  return email.contains(logQuery) || 
+                         itemName.contains(logQuery) || 
+                         before.contains(logQuery) || 
+                         after.contains(logQuery) ||
+                         movement.contains(logQuery);
+                }).toList();
+      
+                if (logs.isEmpty) {
+                  return Center(
+                child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.assignment,
+                    size: 80,
+                    color: Color(0x80124d95),
+                    ),
+                Text(
+                  'No Logs to display',
+                  style: TextStyle(
+                    fontSize: 34,
+                    color: Color(0x80124d95),
                   ),
-              Text(
-                'No Logs to display',
-                style: TextStyle(
-                  fontSize: 34,
-                  color: Color(0x80124d95),
+                  ),
+                ]
                 ),
-                ),
-              ]
-              ),
-            );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                itemCount: logs.length,
-                itemBuilder: (context, index) {
-                  final log = logs[index].data() as Map<String, dynamic>;
-                  return _buildLogCard(log);
-                },
               );
-            },
+                }
+      
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: logs.length,
+                  itemBuilder: (context, index) {
+                    final log = logs[index].data() as Map<String, dynamic>;
+                    return _buildLogCard(log);
+                  },
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -110,17 +113,17 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
     final bool isStockIn = diff > 0;
 
     return Card(
+      color: Colors.white,
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.blue.shade100),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: (isStockIn ? Colors.green : Colors.orange).withAlpha(30),
+            color: (isStockIn ? Colors.green : Colors.orange).withAlpha(20),
             shape: BoxShape.circle,
           ),
           child: Icon(
