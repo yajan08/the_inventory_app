@@ -91,18 +91,44 @@ Future<void> updateItem(String docId, Item newItem, String userEmail) async {
 
     // create log only if quantity changed
     if (oldQuantity != newQuantity) {
+      final bool isStockIn = newQuantity > oldQuantity;
+      final int diff = newQuantity - oldQuantity;
+
       final log = {
         'itemId': docId,
-        'userEmail': userEmail, // <- use passed email
+
+        // original data
+        'userEmail': userEmail,
         'itemName': itemName,
         'quantityBefore': oldQuantity,
         'quantityAfter': newQuantity,
+
+        // 🔥 PRECOMPUTED SEARCH FIELDS
+        'userEmailLower': userEmail.toLowerCase(),
+        'itemNameLower': itemName.toLowerCase(),
+        'movement': isStockIn ? 'stock in' : 'stock out',
+        'diff': diff,
+
         'timeEdited': Timestamp.now(),
       };
 
-      final logRef = logs.doc();
-      transaction.set(logRef, log);
+      transaction.set(logs.doc(), log);
     }
+
+    // if (oldQuantity != newQuantity) {
+      
+    //   final log = {
+    //     'itemId': docId,
+    //     'userEmail': userEmail, // <- use passed email
+    //     'itemName': itemName,
+    //     'quantityBefore': oldQuantity,
+    //     'quantityAfter': newQuantity,
+    //     'timeEdited': Timestamp.now(),
+    //   };
+
+    //   final logRef = logs.doc();
+    //   transaction.set(logRef, log);
+    // }
 
     // update item
     transaction.update(itemRef, {

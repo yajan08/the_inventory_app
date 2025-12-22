@@ -27,7 +27,6 @@ class _ItemDetailState extends State<ItemDetail> {
       .snapshots();
 }
 
-
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController minQuantityController = TextEditingController();
@@ -175,7 +174,7 @@ void stockInOutDialog({required bool isStockIn}) {
             onPressed: _confirmDelete, // call confirmation dialog
           ),
        ],
-        ),
+      ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: FirebaseFirestore.instance
             .collection('items')
@@ -185,7 +184,6 @@ void stockInOutDialog({required bool isStockIn}) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-
           // final data = snapshot.data!.data() as Map<String, dynamic>;
           final doc = snapshot.data;
 
@@ -277,9 +275,9 @@ StreamBuilder<QuerySnapshot>(
         final log = snapshot.data!.docs[index].data() as Map<String, dynamic>;
 
         final before = log['quantityBefore'] as int;
-final after = log['quantityAfter'] as int;
-final delta = after - before;
-final isStockIn = delta > 0;
+        final after = log['quantityAfter'] as int;
+        final delta = after - before;
+        final isStockIn = delta > 0;
 
 return Card(
   margin: const EdgeInsets.symmetric(vertical: 6),
@@ -471,30 +469,6 @@ void _updateItem() {
   );
   Navigator.pop(context); // go back after update
 }
-
-
-//   void _updateItem() {
-
-// // pass currentemail here. to add it to logs later.
-
-//     final item = Item(
-//       name: nameController.text,
-//       quantity: int.tryParse(quantityController.text) ?? 0,
-//       minQuantity: int.tryParse(minQuantityController.text) ?? 0,
-//       location: locationController.text,
-//       note: noteController.text,
-//     );
-
-//     FirestoreService().updateItem(widget.docId, item);
-
-//     ScaffoldMessenger.of(context).showSnackBar(
-//       const SnackBar(content: Text('Item updated')),
-//     );
-//     Navigator.pop(context);
-//     // showdialog also does pop, this also does pop, so user goes back to home page directly.
-//   }
-// }
-
 
 String _formatTimestamp(Timestamp timestamp) {
   final dt = timestamp.toDate();

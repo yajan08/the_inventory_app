@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+// for date search in logs.
+
+final Map<String, String> _dateCache = {};
+
 class GlobalLogsPage extends StatefulWidget {
   const GlobalLogsPage({super.key});
 
@@ -45,45 +49,76 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
                   .orderBy('timeEdited', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  _dateCache.clear();
+                }
                 if (snapshot.hasError) return const Center(child: Text('Error loading logs'));
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
       
                 final logs = snapshot.data!.docs.where((doc) {
+                  if (logQuery.isEmpty) return true;
+
                   final data = doc.data() as Map<String, dynamic>;
-                  
-                  // --- Data Normalization for Search ---
-                  final email = (data['userEmail'] ?? '').toString().toLowerCase();
-                  final itemName = (data['itemName'] ?? '').toString().toLowerCase();
-                  final before = (data['quantityBefore'] ?? 0).toString();
-                  final after = (data['quantityAfter'] ?? 0).toString();
-                  
-                  // Logic for "stock in" or "stock out" text search
-                  final int diff = (data['quantityAfter'] ?? 0) - (data['quantityBefore'] ?? 0);
-                  final String movement = diff > 0 ? "stock in" : "stock out";
-      
-                  // For search by data like 08/12 or 21/08/2025 or 12/2025
-                  final timestamp = data['timeEdited'];
-                  String dateSearch = '';
+                  final docId = doc.id;
 
-                  if (timestamp != null && timestamp is Timestamp) {
-                    final dt = timestamp.toDate();
+                  // ✅ DATE CACHE (computed ONCE per document)
+                  final dateSearch = _dateCache.putIfAbsent(docId, () {
+                    final ts = data['timeEdited'];
+                    if (ts == null || ts is! Timestamp) return '';
 
+                    final dt = ts.toDate();
                     final day = dt.day.toString().padLeft(2, '0');
                     final month = dt.month.toString().padLeft(2, '0');
                     final year = dt.year.toString();
 
-                    // searchable formats
-                    dateSearch = '$day/$month $day/$month/$year';
-                  }
+                    return '$day/$month $day/$month/$year';
+                  });
 
-                  // Return true if query matches ANY field
-                  return email.contains(logQuery) || 
-                         itemName.contains(logQuery) || 
-                         before.contains(logQuery) || 
-                         after.contains(logQuery) ||
-                         movement.contains(logQuery)||
-                         dateSearch.contains(logQuery);
+                  return (data['userEmailLower'] ?? '').contains(logQuery) ||
+                        (data['itemNameLower'] ?? '').contains(logQuery) ||
+                        (data['movement'] ?? '').contains(logQuery) ||
+                        (data['quantityBefore']?.toString().contains(logQuery) ?? false) ||
+                        (data['quantityAfter']?.toString().contains(logQuery) ?? false) ||
+                        dateSearch.contains(logQuery);
                 }).toList();
+
+
+                // final logs = snapshot.data!.docs.where((doc) {
+                //   final data = doc.data() as Map<String, dynamic>;
+                  
+                //   // --- Data Normalization for Search ---
+                //   final email = (data['userEmail'] ?? '').toString().toLowerCase();
+                //   final itemName = (data['itemName'] ?? '').toString().toLowerCase();
+                //   final before = (data['quantityBefore'] ?? 0).toString();
+                //   final after = (data['quantityAfter'] ?? 0).toString();
+                  
+                //   // Logic for "stock in" or "stock out" text search
+                //   final int diff = (data['quantityAfter'] ?? 0) - (data['quantityBefore'] ?? 0);
+                //   final String movement = diff > 0 ? "stock in" : "stock out";
+      
+                //   // For search by data like 08/12 or 21/08/2025 or 12/2025
+                //   final timestamp = data['timeEdited'];
+                //   String dateSearch = '';
+
+                //   if (timestamp != null && timestamp is Timestamp) {
+                //     final dt = timestamp.toDate();
+
+                //     final day = dt.day.toString().padLeft(2, '0');
+                //     final month = dt.month.toString().padLeft(2, '0');
+                //     final year = dt.year.toString();
+
+                //     // searchable formats
+                //     dateSearch = '$day/$month $day/$month/$year';
+                //   }
+
+                //   // Return true if query matches ANY field
+                //   return email.contains(logQuery) || 
+                //          itemName.contains(logQuery) || 
+                //          before.contains(logQuery) || 
+                //          after.contains(logQuery) ||
+                //          movement.contains(logQuery)||
+                //          dateSearch.contains(logQuery);
+                // }).toList();
       
                 if (logs.isEmpty) {
                   return Center(
