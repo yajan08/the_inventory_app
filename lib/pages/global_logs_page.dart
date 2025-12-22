@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-
 class GlobalLogsPage extends StatefulWidget {
   const GlobalLogsPage({super.key});
 
@@ -24,6 +23,9 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
               hintText: 'Search logs...',
               leading: const Icon(Icons.search),
               elevation: WidgetStateProperty.all(0),
+              backgroundColor: WidgetStateProperty.all(
+              Color(0x30124d95),
+              ),
               shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -59,12 +61,28 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
                   final int diff = (data['quantityAfter'] ?? 0) - (data['quantityBefore'] ?? 0);
                   final String movement = diff > 0 ? "stock in" : "stock out";
       
+                  // For search by data like 08/12 or 21/08/2025 or 12/2025
+                  final timestamp = data['timeEdited'];
+                  String dateSearch = '';
+
+                  if (timestamp != null && timestamp is Timestamp) {
+                    final dt = timestamp.toDate();
+
+                    final day = dt.day.toString().padLeft(2, '0');
+                    final month = dt.month.toString().padLeft(2, '0');
+                    final year = dt.year.toString();
+
+                    // searchable formats
+                    dateSearch = '$day/$month $day/$month/$year';
+                  }
+
                   // Return true if query matches ANY field
                   return email.contains(logQuery) || 
                          itemName.contains(logQuery) || 
                          before.contains(logQuery) || 
                          after.contains(logQuery) ||
-                         movement.contains(logQuery);
+                         movement.contains(logQuery)||
+                         dateSearch.contains(logQuery);
                 }).toList();
       
                 if (logs.isEmpty) {
@@ -114,13 +132,13 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
 
     return Card(
       color: Colors.white,
-      margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         leading: Container(
+          height: 100,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: (isStockIn ? Colors.green : Colors.orange).withAlpha(20),
@@ -158,18 +176,46 @@ class _GlobalLogsPageState extends State<GlobalLogsPage> {
             ),
           ],
         ),
-        trailing: Text(
-          _formatTimestamp(log['timeEdited']),
-          style: const TextStyle(fontSize: 11, color: Colors.grey),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end, // RIGHT ALIGN
+          children: [
+            Text(
+              _formatDate(log['timeEdited']),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _formatTime(log['timeEdited']),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
         ),
         isThreeLine: true,
       ),
     );
   }
 
-  String _formatTimestamp(dynamic timestamp) {
-    if (timestamp == null) return '';
-    final DateTime dt = (timestamp as Timestamp).toDate();
-    return "${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
-  }
+String _formatDate(dynamic timestamp) {
+  if (timestamp == null) return '';
+  final dt = (timestamp as Timestamp).toDate();
+  return '${dt.day.toString().padLeft(2, '0')}/'
+         '${dt.month.toString().padLeft(2, '0')}/'
+         '${dt.year}';
 }
+
+String _formatTime(dynamic timestamp) {
+  if (timestamp == null) return '';
+  final dt = (timestamp as Timestamp).toDate();
+  return '${dt.hour.toString().padLeft(2, '0')}:'
+         '${dt.minute.toString().padLeft(2, '0')}';
+}
+
+}
+
+//  String _formatTimestamp(dynamic timestamp) {
+//     if (timestamp == null) return '';
+//     final DateTime dt = (timestamp as Timestamp).toDate();
+//     return "${dt.day}/${dt.month}/${dt.year}\n ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+//   }
+// }

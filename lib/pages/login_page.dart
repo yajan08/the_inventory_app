@@ -66,11 +66,7 @@ class _LoginPageState extends State<LoginPage> {
                mainAxisAlignment: MainAxisAlignment.center,
                children: [
                  // app logo
-                 Icon(
-                   Icons.inventory,
-                   size: 80,
-                   color: Color(0xFF124d95),
-                 ),
+                 Image.asset('assets/paramLogo3.png', height: 120),
            
                  const SizedBox(height: 30),
                  // welcome or welcome back message

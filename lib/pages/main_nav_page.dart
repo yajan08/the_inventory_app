@@ -1,3 +1,4 @@
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:the_inventory_app/pages/global_logs_page.dart';
 import 'package:the_inventory_app/pages/home_page.dart';
@@ -25,7 +26,8 @@ final authService = AuthService();
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("The Inventory App", style: TextStyle(color: Color(0xFFe9f5ff))),
+        toolbarHeight: 70,
+        title: const Text("Param's Inventory", style: TextStyle(color: Color(0xFFe9f5ff))),
         backgroundColor: const Color(0xFF124d95),
         actions: [
           // ElevatedButton(onPressed: () { authService.signOut(); }, child: Icon(Icons.logout_outlined))
@@ -45,19 +47,18 @@ final authService = AuthService();
       // The body shows the page based on the selected index
       body: _pages[_selectedIndex],
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+      bottomNavigationBar: CurvedNavigationBar(
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        backgroundColor: const Color(0xFF124d95),
-        selectedItemColor: const Color(0xFFe9f5ff),
-        unselectedItemColor: const Color(0x80e9f5ff), // 50% opacity
+        backgroundColor: Color(0xFFe9f5ff),
+        color: const Color(0xFF124d95), // 50% opacity
+        animationDuration: Duration(milliseconds: 300),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.inventory), label: "Inventory"),
-          BottomNavigationBarItem(icon: Icon(Icons.assessment), label: "Logs"),
+          Icon(Icons.inventory, color: Color(0xFFe9f5ff)),
+          Icon(Icons.assignment, color: Color(0xFFe9f5ff)),
         ],
       ),
     );

@@ -111,6 +111,7 @@ void addItemDialog() {
             ),
           ),
           onPressed: () {
+
             Item item = Item(
               name: itemNameController.text,
               quantity: int.tryParse(itemQuantityController.text) ?? 0,
@@ -121,11 +122,11 @@ void addItemDialog() {
 
             firestoreService.addItem(item);
 
-            itemNameController.text = '';
-            itemQuantityController.text = '';
-            itemMinQuantityController.text = '';
-            itemLocationController.text = '';
-            itemNoteController.text = '';
+            itemNameController.clear();
+            itemQuantityController.clear();
+            itemMinQuantityController.clear();
+            itemLocationController.clear();
+            itemNoteController.clear();
 
             Navigator.pop(context);
           },
@@ -157,7 +158,10 @@ void addItemDialog() {
       child: SearchBar(
       hintText: 'Search items...',
       leading: const Icon(Icons.search),
-      elevation: WidgetStateProperty.all(0), // Removes the shadow
+      elevation: WidgetStateProperty.all(0),
+      backgroundColor: WidgetStateProperty.all(
+      Color(0x30124d95),
+      ), // Removes the shadow
       shape: WidgetStateProperty.all(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12), // Adjust for desired roundness
