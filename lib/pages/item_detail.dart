@@ -1,31 +1,30 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // Ensure intl is in pubspec.yaml
 import 'package:the_inventory_app/services/auth_service.dart';
 import 'package:the_inventory_app/services/firestore.dart';
 import 'package:the_inventory_app/utilities/my_textfield.dart';
 
 class ItemDetail extends StatefulWidget {
   final String docId;
-
-  const ItemDetail({
-    super.key,
-    required this.docId,
-  });
+  const ItemDetail({super.key, required this.docId});
 
   @override
   State<ItemDetail> createState() => _ItemDetailState();
 }
 
 class _ItemDetailState extends State<ItemDetail> {
+  Timestamp? _originalTimeCreated;
+  String logSearchQuery = '';
+  int selectedLogFilter = 0; // 0: All, 1: In, 2: Out
 
   Stream<QuerySnapshot> _logsStream() {
-  return FirebaseFirestore.instance
-      .collection('logs')
-      .where('itemId', isEqualTo: widget.docId)
-      .orderBy('timeEdited', descending: true)
-      .snapshots();
-}
+    return FirebaseFirestore.instance
+        .collection('logs')
+        .where('itemId', isEqualTo: widget.docId)
+        .orderBy('timeEdited', descending: true)
+        .snapshots();
+  }
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
@@ -34,455 +33,356 @@ class _ItemDetailState extends State<ItemDetail> {
   final TextEditingController noteController = TextEditingController();
   final TextEditingController stockInOutController = TextEditingController();
 
-  @override
-void dispose() {
-  nameController.dispose();
-  quantityController.dispose();
-  minQuantityController.dispose();
-  locationController.dispose();
-  noteController.dispose();
-  stockInOutController.dispose();
-  super.dispose();
-}
-
-void _confirmDelete() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("Delete Item"),
-      content: const Text("Are you sure you want to delete this item?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(context); // close dialog
-            Navigator.pop(context); // go back to list
-            await FirestoreService().deleteItem(widget.docId);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text("Delete"),
-        ),
-      ],
-    ),
-  );
-}
-
-
-// CHANGE 1: add a parameter to control stock in / out
-void stockInOutDialog({required bool isStockIn}) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      title: Center(
-        // CHANGE 2: dynamic title
-        child: Text(
-          isStockIn ? "Stock In" : "Stock Out",
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.9,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              MyTextField(
-                // CHANGE 3: dynamic hint
-                hintText: isStockIn
-                    ? "Quantity to add..."
-                    : "Quantity to remove...",
-                obscureText: false,
-                controller: stockInOutController,
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-        ),
-      ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      actions: [
-        TextButton(
-          onPressed: () {
-            stockInOutController.clear();
-            Navigator.pop(context);
-          },
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          onPressed: () {
-            final int currentQty =
-                int.tryParse(quantityController.text) ?? 0;
-            final int changeQty =
-                int.tryParse(stockInOutController.text) ?? 0;
-
-            // CHANGE 4: +/- logic switch
-            final int newQty = isStockIn
-                ? currentQty + changeQty
-                : currentQty - changeQty;
-
-            if (newQty < 0) return; // safety, minimal guard
-
-            quantityController.text = newQty.toString();
-            stockInOutController.clear();
-            _updateItem();
-            Navigator.pop(context);
-          },
-          child: const Text("Done"),
-        ),
-      ],
-    ),
-  );
-}
-
   bool _initialized = false;
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    quantityController.dispose();
+    minQuantityController.dispose();
+    locationController.dispose();
+    noteController.dispose();
+    stockInOutController.dispose();
+    super.dispose();
+  }
+
+  void _confirmDelete() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Item"),
+        content: const Text("Are you sure you want to delete this item?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              Navigator.pop(context);
+              await FirestoreService().deleteItem(widget.docId);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void stockInOutDialog({required bool isStockIn}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Center(child: Text(isStockIn ? "Stock In" : "Stock Out", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
+        content: MyTextField(
+          hintText: isStockIn ? "Quantity to add..." : "Quantity to remove...",
+          obscureText: false,
+          controller: stockInOutController,
+          keyboardType: TextInputType.number,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              stockInOutController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final int currentQty = int.tryParse(quantityController.text) ?? 0;
+              final int changeQty = int.tryParse(stockInOutController.text) ?? 0;
+              final int newQty = isStockIn ? currentQty + changeQty : currentQty - changeQty;
+              if (newQty < 0) return;
+              
+              quantityController.text = newQty.toString();
+              stockInOutController.clear();
+              FocusScope.of(context).unfocus(); // Dismiss keyboard
+              Navigator.pop(context);
+              Navigator.pop(context);
+              await _updateItem(shouldPop: false);
+            },
+            child: const Text("Done"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Item Details',
-          style: const TextStyle(
-            color: Color(0xFFe9f5ff),
-          ),
-          ),
-        backgroundColor: Color(0xFF124d95),
-        foregroundColor: Color(0xFFe9f5ff),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _confirmDelete, // call confirmation dialog
-          ),
-       ],
+        title: const Text('Item Details', style: TextStyle(color: Color(0xFFe9f5ff), fontSize: 18)),
+        backgroundColor: const Color(0xFF124d95),
+        foregroundColor: const Color(0xFFe9f5ff),
+        elevation: 0,
+        actions: [IconButton(icon: const Icon(Icons.delete_outline), onPressed: _confirmDelete)],
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('items')
-            .doc(widget.docId)
-            .snapshots(),
+        stream: FirebaseFirestore.instance.collection('items').doc(widget.docId).snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          // final data = snapshot.data!.data() as Map<String, dynamic>;
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           final doc = snapshot.data;
+          if (doc == null || !doc.exists) return const Center(child: Text('Item not found'));
+          final data = doc.data() as Map<String, dynamic>;
 
-if (doc == null || !doc.exists) {
-  return const Center(child: Text('Item not found'));
-}
-
-final data = doc.data() as Map<String, dynamic>;
-
-          // initialize controllers only once
           if (!_initialized) {
-            nameController.text = data['name'] ?? '';
-            quantityController.text =
-                (data['quantity'] ?? 0).toString();
-            minQuantityController.text =
-                (data['minQuantity'] ?? 0).toString();
-            locationController.text = data['location'] ?? '';
+            nameController.text = data[ItemFields.name] ?? '';
+            quantityController.text = (data[ItemFields.quantity] ?? 0).toString();
+            minQuantityController.text = (data[ItemFields.minQuantity] ?? 0).toString();
+            locationController.text = data[ItemFields.location] ?? '';
+            noteController.text = data[ItemFields.note] ?? '';
+            _originalTimeCreated = data[ItemFields.timeCreated] as Timestamp?;
             _initialized = true;
-            noteController.text = data['note'] ?? '';
           }
 
-          final quantity = data['quantity'] ?? 0;
-          final minQuantity = data['minQuantity'] ?? 0;
+          final int quantity = data[ItemFields.quantity] ?? 0;
+          final int minQuantity = data[ItemFields.minQuantity] ?? 0;
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _field("Name", nameController),
-                _field("Quantity", quantityController,
-                    keyboardType: TextInputType.number),
-                _field("Minimum Quantity", minQuantityController,
-                    keyboardType: TextInputType.number),
-                _field("Location", locationController),
-                _field("Notes", noteController),
-                const SizedBox(height: 20),
-                if (quantity <= minQuantity)
-                  const Text(
-                    '⚠ Stock is low',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 70,
-                  child: ElevatedButton(
-                    onPressed: _updateItem,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF124d95),
-                      foregroundColor: Color(0xFFe9f5ff),
-                      minimumSize: const Size.fromHeight(82), // taller button
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(20))
-                    ),
-                    child: const Text("Save Changes"),
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _field("Name", nameController),
+                      _field("Quantity", quantityController, keyboardType: TextInputType.number),
+                      _field("Minimum Quantity", minQuantityController, keyboardType: TextInputType.number),
+                      _field("Location", locationController),
+                      _field("Notes", noteController),
+                      if (quantity <= minQuantity) 
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: Text('⚠ Stock is low', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        ),
+                      ElevatedButton(
+                        onPressed: () => _updateItem(shouldPop: true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF124d95),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(60),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text("Save Changes", style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 32),
+                      const Text("Activity History", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                      const SizedBox(height: 12),
+                      
+                      // LOG SEARCH
+                      TextField(
+                        autofocus: false,
+                        decoration: InputDecoration(
+                          hintText: 'Search user or month (e.g. Jan)...',
+                          prefixIcon: const Icon(Icons.search, size: 20),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                        ),
+                        onChanged: (val) => setState(() => logSearchQuery = val),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Row(
+                        children: [
+                          _logFilterChip(0, "All"),
+                          const SizedBox(width: 8),
+                          _logFilterChip(1, "Stock In"),
+                          const SizedBox(width: 8),
+                          _logFilterChip(2, "Stock Out"),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 32),
+              ),
+              StreamBuilder<QuerySnapshot>(
+                stream: _logsStream(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+                  
+                  final filteredLogs = snapshot.data!.docs.where((doc) {
+                    final logData = doc.data() as Map<String, dynamic>;
+                    final int diff = (logData['quantityAfter'] ?? 0) - (logData['quantityBefore'] ?? 0);
+                    
+                    if (selectedLogFilter == 1 && diff <= 0) return false;
+                    if (selectedLogFilter == 2 && diff >= 0) return false;
 
-const Text(
-  "Logs",
-  style: TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-  ),
-),
+                    if (logSearchQuery.isEmpty) return true;
 
-const SizedBox(height: 12),
+                    final DateTime date = (logData['timeEdited'] as Timestamp).toDate();
+                    String normalize(dynamic v) => (v ?? '').toString().toLowerCase().replaceAll(' ', '');
+                    
+                    final q = normalize(logSearchQuery);
+                    // Search in User, Month Name, and Full Date string
+                    final searchPool = normalize(logData['userEmail']) + 
+                                     DateFormat('MMMM').format(date).toLowerCase() + 
+                                     DateFormat('dd/MM/yyyy').format(date);
+                    
+                    return searchPool.contains(q);
+                  }).toList();
 
-StreamBuilder<QuerySnapshot>(
-  stream: _logsStream(),
-  builder: (context, snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
-      return const CircularProgressIndicator();
-    }
+                  if (filteredLogs.isEmpty) {
+                    return const SliverToBoxAdapter(child: Center(child: Text('No matching history found', style: TextStyle(color: Colors.grey))));
+                  }
 
-    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-      return const Text(
-        'No logs yet',
-        style: TextStyle(color: Colors.grey),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: snapshot.data!.docs.length,
-      itemBuilder: (context, index) {
-        final log = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-
-        final before = log['quantityBefore'] as int;
-        final after = log['quantityAfter'] as int;
-        final delta = after - before;
-        final isStockIn = delta > 0;
-
-return Card(
-  margin: const EdgeInsets.symmetric(vertical: 6),
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Padding(
-    padding: const EdgeInsets.all(12),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // LEFT ICON (full visual weight)
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: (isStockIn ? Colors.green : Colors.orange).withAlpha(30),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            isStockIn ? Icons.add : Icons.remove,
-            color: isStockIn ? Colors.green : Colors.orange,
-            size: 28,
-          ),
-        ),
-
-        const SizedBox(width: 12),
-
-        // RIGHT CONTENT
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // TOP ROW: delta + before/after
-              Row(
-                children: [
-                  Text(
-                    '${delta > 0 ? '+' : ''}$delta',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isStockIn ? Colors.green : Colors.orange,
+                  return SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => _buildElegantLogTile(filteredLogs[index].data() as Map<String, dynamic>),
+                        childCount: filteredLogs.length,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '$before → $after',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
-
-              const SizedBox(height: 6),
-
-              // USER EMAIL
-              Text(
-                log['userEmail'] ?? 'Unknown user',
-                style: const TextStyle(
-                  fontSize: 14,
-                ),
-              ),
-
-              const SizedBox(height: 2),
-
-              // DATE TIME
-              Text(
-                _formatTimestamp(log['timeEdited']),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
-          ),
-        ),
-      ],
-    ),
-  ),
-);
-
-
-
-      },
-    );
-  },
-),
-
-
-              ],
-            ),
           );
         },
       ),
-
-      // stock in and out buttons below
-    bottomNavigationBar: Container(
-  padding: const EdgeInsets.all(16),
-  child: Row(
-    children: [
-      Expanded(
-        child: ElevatedButton(
-          onPressed: () {
-            // stock out button pressed
-            stockInOutDialog(isStockIn: false);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF124d95),
-            foregroundColor: Colors.orange,
-            minimumSize: const Size.fromHeight(82), // taller button
-            shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(20))
-          ),
-          child: const Text("Stock Out"),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: Color(0xFFF1F5F9))),
+        ),
+        child: Row(
+          children: [
+            Expanded(child: _actionBtn("Stock Out", const Color(0xFFF59E0B), () => stockInOutDialog(isStockIn: false))),
+            const SizedBox(width: 12),
+            Expanded(child: _actionBtn("Stock In", const Color(0xFF10B981), () => stockInOutDialog(isStockIn: true))),
+          ],
         ),
       ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: ElevatedButton(
-          onPressed: (){
-            // show stock in pop up
-            stockInOutDialog(isStockIn: true);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF124d95),
-            foregroundColor: Colors.green,
-            minimumSize: const Size.fromHeight(82), // taller button
-            shape: RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.circular(20))
-          ),
-          child: const Text("Stock In"),
-        ),
-      ),
-    ],
-  ),
-),
-
     );
   }
 
-  Widget _field(
-    String label,
-    TextEditingController controller, {
-    TextInputType keyboardType = TextInputType.text,
-  }) {
+  Widget _buildElegantLogTile(Map<String, dynamic> log) {
+    final int diff = (log['quantityAfter'] ?? 0) - (log['quantityBefore'] ?? 0);
+    final bool isStockIn = diff > 0;
+    final Color accentColor = isStockIn ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
+    final DateTime date = (log['timeEdited'] as Timestamp).toDate();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(width: 4, color: accentColor),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(log['userEmail'] ?? 'Unknown', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF475569))),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Text('${log['quantityBefore']} → ${log['quantityAfter']}', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                        const SizedBox(width: 8),
+                        Text(isStockIn ? '+${diff.abs()}' : '-${diff.abs()}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: accentColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFF1F5F9)))),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(DateFormat('dd/MM/yyyy').format(date), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8))),
+                  Text(DateFormat('hh:mm a').format(date), style: const TextStyle(fontSize: 9, color: Color(0xFFCBD5E1))),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _logFilterChip(int index, String label) {
+    final bool isSel = selectedLogFilter == index;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSel,
+      selectedColor: const Color(0xFF124d95),
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(fontSize: 12, color: isSel ? Colors.white : const Color(0xFF64748B), fontWeight: isSel ? FontWeight.bold : FontWeight.normal),
+      onSelected: (val) => setState(() => selectedLogFilter = index),
+      showCheckmark: false,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: isSel ? Colors.transparent : const Color(0xFFE2E8F0))),
+    );
+  }
+
+  Widget _actionBtn(String label, Color color, VoidCallback onTap) {
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF124d95),
+        foregroundColor: color,
+        minimumSize: const Size.fromHeight(60),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _field(String label, TextEditingController controller, {TextInputType keyboardType = TextInputType.text}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         decoration: InputDecoration(
           labelText: label,
-          hintText: 'Enter $label...',
-          hintStyle: TextStyle(
-          color: Colors.blue.shade300
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20),
-            borderSide:
-                BorderSide(color: Colors.blue.shade800),
-          ),
-
-          focusedBorder: OutlineInputBorder(
-            borderSide:
-                BorderSide(color: Colors.blue.shade300),
-          ),
+          labelStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 14),
+          filled: true,
+          fillColor: Colors.white,
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF124d95), width: 1.5)),
         ),
       ),
     );
   }
 
-void _updateItem() {
-  final item = Item(
-    name: nameController.text,
-    quantity: int.tryParse(quantityController.text) ?? 0,
-    minQuantity: int.tryParse(minQuantityController.text) ?? 0,
-    location: locationController.text,
-    note: noteController.text,
-  );
-
-  // get current email
-  final userEmail = AuthService().getCurrentUser()?.email ?? 'unknown';
-
-  // pass email to updateItem
-  FirestoreService().updateItem(widget.docId, item, userEmail);
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Item updated')),
-  );
-  Navigator.pop(context); // go back after update
-}
-
-String _formatTimestamp(Timestamp timestamp) {
-  final dt = timestamp.toDate();
-  return '${dt.day.toString().padLeft(2, '0')} '
-      '${_month(dt.month)} ${dt.year} · '
-      '${dt.hour.toString().padLeft(2, '0')}:'
-      '${dt.minute.toString().padLeft(2, '0')}';
-}
-
-String _month(int m) {
-  const months = [
-    'Jan','Feb','Mar','Apr','May','Jun',
-    'Jul','Aug','Sep','Oct','Nov','Dec'
-  ];
-  return months[m - 1];
-}
+  Future<void> _updateItem({required bool shouldPop}) async {
+    final item = Item(
+      name: nameController.text,
+      quantity: int.tryParse(quantityController.text) ?? 0,
+      minQuantity: int.tryParse(minQuantityController.text) ?? 0,
+      location: locationController.text,
+      note: noteController.text,
+      timeCreated: _originalTimeCreated, 
+    );
+    final userEmail = AuthService().getCurrentUser()?.email ?? 'unknown';
+    try {
+      await FirestoreService().updateItem(widget.docId, item, userEmail);
+      if (mounted && shouldPop) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item updated successfully')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
 }
