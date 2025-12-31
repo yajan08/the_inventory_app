@@ -42,10 +42,24 @@ class Item {
 class FirestoreService {
   final CollectionReference items = FirebaseFirestore.instance.collection('items');
   final CollectionReference logs = FirebaseFirestore.instance.collection('logs');
+  final CollectionReference bannedUsers = FirebaseFirestore.instance.collection('banned_users'); // Added
 
+  // --- BAN LOGIC ---
+  Future<void> banUser(String uid, String email, String reason) async {
+    await bannedUsers.doc(uid).set({
+      'bannedEmail': email,
+      'reason': reason,
+      'bannedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> unbanUser(String uid) async {
+    await bannedUsers.doc(uid).delete();
+  }
+
+  // --- ITEM LOGIC ---
   Future<void> addItem(Item item) => items.add(item.toMap());
 
-  // We fetch the full list (sorted) and filter on-device for complex logic
   Stream<QuerySnapshot> getItemsStream() {
     return items
         .orderBy(ItemFields.isLow, descending: true)

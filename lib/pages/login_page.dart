@@ -106,31 +106,6 @@ class _LoginPageState extends State<LoginPage> {
                  ),
            
                  const SizedBox(height: 15),
-           
-                 // register button if no account yet
-                 Row(
-                   mainAxisAlignment: MainAxisAlignment.center,
-                   children: [
-                     Text(
-                       "No account? ",
-                       style: TextStyle(
-                       color: Color(0xFF124d95),
-                       ),
-                     ),
-                     GestureDetector(
-                      onTap: widget.onTap,
-                         child: Text(
-                           "Register now! ",
-                           style: TextStyle(
-                             fontWeight: FontWeight.bold,
-                             decoration: TextDecoration.underline,
-                             color: Color(0xFF124d95),
-                           ),
-                         ),
-                     ),
-                   ],
-                 ),
-           
                ],
              ),
            ),
