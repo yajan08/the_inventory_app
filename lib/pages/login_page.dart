@@ -1,4 +1,6 @@
 
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:the_inventory_app/services/auth_service.dart';
 import 'package:the_inventory_app/utilities/my_button.dart';
