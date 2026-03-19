@@ -1,0 +1,10 @@
+[[plugins]]
+  package = "netlify-plugin-flutter-sdk"
+
+  [plugins.inputs]
+    # This ensures Netlify uses the same version you have locally
+    version = "stable"
+
+[build]
+  publish = "build/web"
+  command = "flutter build web --release --wasm-renderer=html"
